@@ -2,122 +2,119 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>3D-каталог оборудования | AR/Web</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, Arial, sans-serif; overflow: hidden; background: #000; }
+    body { font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; overflow: hidden; background: #000; }
 
-    /* Лого + выбор */
-    #intro { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
+    #intro { 
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      z-index: 1000; display: flex; flex-direction: column; justify-content: center; 
+      align-items: center; cursor: pointer; 
+    }
     #logo { max-width: 400px; max-height: 200px; filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3)); animation: logoAnim 2s ease-out; }
-    #intro p { color: white; font-size: 1.4em; margin-top: 30px; animation: fadeIn 1s 1s both; }
+    #intro p { color: white; font-size: 1.4em; margin-top: 30px; animation: fadeIn 1s 1s both; text-align: center; }
     @keyframes logoAnim { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
     #model-select { 
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
       background: rgba(0,0,0,0.95); backdrop-filter: blur(20px); 
-      padding: 40px; border-radius: 20px; z-index: 999; text-align: center; 
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5); display: none; 
+      padding: 40px; border-radius: 20px; z-index: 999; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.5); 
+      display: none; max-width: 90vw; max-height: 80vh; overflow-y: auto;
     }
-    #model-list { list-style: none; margin: 20px 0; }
+    #model-list { list-style: none; margin: 20px 0; padding: 0; }
     #model-list li { 
-      background: rgba(255,255,255,0.1); margin: 10px 0; padding: 15px; 
-      border-radius: 12px; cursor: pointer; transition: all 0.3s; 
-      backdrop-filter: blur(10px); user-select: none; touch-action: manipulation;
+      background: rgba(255,255,255,0.1); margin: 10px 0; padding: 15px; border-radius: 12px; 
+      cursor: pointer; transition: all 0.3s; backdrop-filter: blur(10px); user-select: none; 
+      touch-action: manipulation; font-size: 16px;
     }
     #model-list li:hover, #model-list li:active { background: rgba(255,255,255,0.2); transform: translateX(10px); }
 
-    /* Пароль */
     #password-screen { 
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
       background: rgba(0,0,0,0.98); padding: 40px; border-radius: 20px; z-index: 1001; 
-      text-align: center; display: none; backdrop-filter: blur(20px); 
-      box-shadow: 0 20px 60px rgba(0,0,0,0.8); 
+      text-align: center; display: none; backdrop-filter: blur(20px); box-shadow: 0 20px 60px rgba(0,0,0,0.8); 
+      max-width: 90vw;
     }
     #password-input { 
       padding: 15px; font-size: 18px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.3); 
-      background: rgba(255,255,255,0.1); color: white; width: 250px; margin: 20px; 
-      outline: none; 
+      background: rgba(255,255,255,0.1); color: white; width: 250px; max-width: 80vw; 
+      margin: 20px auto; display: block; outline: none; 
     }
     #password-input::placeholder { color: rgba(255,255,255,0.6); }
     .btn { 
       background: linear-gradient(45deg, #667eea, #764ba2); color: white; border: none; 
-      padding: 12px 30px; border-radius: 25px; cursor: pointer; font-size: 16px; margin: 10px; 
-      touch-action: manipulation; transition: all 0.2s; 
+      padding: 15px 35px; border-radius: 25px; cursor: pointer; font-size: 16px; margin: 10px; 
+      touch-action: manipulation; transition: all 0.2s; font-weight: 500; min-width: 160px;
     }
-    .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+    .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
     .btn:active { transform: translateY(0); }
     .btn-secondary { background: rgba(255,255,255,0.2); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-    /* Viewer */
     #viewer-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; }
-    #ui { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 10px; }
+    #ui { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 12px; }
     #ui button { 
-      background: rgba(255,255,255,0.95); border: none; padding: 12px 20px; border-radius: 25px; 
-      cursor: pointer; font-size: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
-      touch-action: manipulation; transition: all 0.2s; 
+      background: rgba(255,255,255,0.95); border: none; padding: 14px 22px; border-radius: 25px; 
+      cursor: pointer; font-size: 14px; box-shadow: 0 6px 20px rgba(0,0,0,0.3); 
+      touch-action: manipulation; transition: all 0.2s; font-weight: 500; min-width: 70px;
     }
-    #ui button:hover, #ui button:active:not(:disabled) { background: white; transform: translateY(-2px); }
+    #ui button:hover:not(:disabled), #ui button:active:not(:disabled) { background: white; transform: translateY(-2px); }
+    #ui button.active { background: #4CAF50; color: white; }
     #model-info { 
-      position: absolute; bottom: 20px; left: 20px; color: white; z-index: 100; 
-      background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px; max-width: 300px; 
+      position: absolute; bottom: 25px; left: 25px; color: white; z-index: 100; 
+      background: rgba(0,0,0,0.8); padding: 20px; border-radius: 15px; max-width: 300px; 
+      backdrop-filter: blur(10px);
     }
 
-    /* AR индикатор */
     #ar-instructions { 
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; 
-      text-align: center; z-index: 101; display: none; backdrop-filter: blur(10px); 
-      pointer-events: none;
+      text-align: center; z-index: 101; display: none; backdrop-filter: blur(20px); 
+      pointer-events: none; max-width: 80%;
     }
     .hit-indicator { 
-      position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); 
-      width: 100px; height: 100px; border: 3px solid #00ff88; border-radius: 50%; 
-      display: none; animation: pulse 1s infinite; 
+      position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); 
+      width: 120px; height: 120px; border: 4px solid #00ff88; border-radius: 50%; 
+      display: none; animation: pulse 1s infinite; box-shadow: 0 0 30px #00ff88; 
     }
-    @keyframes pulse { 
-      0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); } 
-      50% { opacity: 0.5; transform: translateX(-50%) scale(1.2); } 
-    }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); } 50% { opacity: 0.4; transform: translateX(-50%) scale(1.3); } }
 
-    /* Loading */
     #loading { 
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
       color: white; z-index: 1002; display: none; text-align: center; 
     }
     .spinner { 
-      border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid white; 
-      border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; 
-      margin: 0 auto 20px; 
+      border: 5px solid rgba(255,255,255,0.3); border-top: 5px solid white; 
+      border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; 
+      margin: 0 auto 25px; 
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .error-overlay { 
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+      background: rgba(0,0,0,0.9); z-index: 2000; display: none; 
+      justify-content: center; align-items: center; color: white; text-align: center;
+    }
   </style>
 
   <script type="importmap">
-    { 
-      "imports": { 
-        "three": "https://unpkg.com/three@0.169.0/build/three.module.js", 
-        "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/" 
-      } 
-    }
+    { "imports": { "three": "https://unpkg.com/three@0.169.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/" } }
   </script>
 </head>
 <body>
-  <!-- Лого -->
   <div id="intro">
     <img src="logo.png" alt="Компания" id="logo">
     <p>Добро пожаловать в 3D-каталог<br><small>Нажмите для продолжения</small></p>
   </div>
 
-  <!-- Выбор модели -->
   <div id="model-select">
     <h2>Выберите модель</h2>
     <ul id="model-list"></ul>
   </div>
 
-  <!-- Пароль -->
   <div id="password-screen">
     <h3 id="model-title">Модель 1</h3>
     <input type="password" id="password-input" placeholder="Введите пароль">
@@ -126,28 +123,34 @@
     <button class="btn btn-secondary" id="btn-back">Назад</button>
   </div>
 
-  <!-- Loading -->
   <div id="loading">
     <div class="spinner"></div>
-    <p>Загрузка модели...</p>
+    <p id="loading-text">Загрузка модели...</p>
   </div>
 
-  <!-- 3D/AR Viewer -->
   <div id="viewer-container">
     <div id="ui">
-      <button id="ar-toggle">🌐 AR</button>
-      <button id="web-toggle">🖥️ 3D</button>
+      <button id="btn-3d" class="active">🖥️ 3D</button>
+      <button id="btn-ar">🌐 AR</button>
       <button id="reset-view">🔄 Сброс</button>
-      <button id="fullscreen">📱 Полный экран</button>
+      <button id="fullscreen">📱 Экран</button>
     </div>
     <div id="ar-instructions">
-      <p>Наведите камеру на ровную поверхность</p>
+      <p>📱 Наведите камеру на ровную поверхность</p>
       <div class="hit-indicator" id="hit-indicator"></div>
-      <p>Касайтесь экрана для размещения модели</p>
+      <p>👆 Касайтесь экрана для размещения</p>
     </div>
     <div id="model-info">
       <h3 id="current-model">Модель</h3>
       <p id="model-desc">Описание</p>
+    </div>
+  </div>
+
+  <div id="error-overlay" class="error-overlay">
+    <div>
+      <h3>Ошибка</h3>
+      <p id="error-message"></p>
+      <button class="btn" onclick="document.getElementById('error-overlay').style.display='none'">OK</button>
     </div>
   </div>
 
@@ -156,9 +159,8 @@
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const MODELS = [
-      { id: 1, name: 'Транспортер', file: 'model1.glb', password: '123', desc: 'Промышленный транспортер' },
+      { id: 1, name: 'Транспортер', file: 'model1.glb', password: '123', desc: 'Промышленный транспorтер' },
       { id: 2, name: 'Станок CNC', file: 'model2.glb', password: '321', desc: 'Фрезерный станок' },
       { id: 3, name: 'Сварочный аппарат', file: 'model3.glb', password: '231', desc: 'Полуавтомат сварки' }
     ];
@@ -166,14 +168,11 @@
     let scene, camera, renderer, controls;
     let currentModel, loadedModelGroup = null;
     let isARMode = false;
-    let animationId;
-    let viewerInitialized = false;
-    let arSession = null;
-    let hitTestSource = null;
-    let referenceSpace = null;
-    let reticle;
+    let animationId, arSession = null;
+    let viewerReady = false;
 
-    const elements = {
+    // DOM элементы
+    const els = {
       intro: document.getElementById('intro'),
       modelSelect: document.getElementById('model-select'),
       passwordScreen: document.getElementById('password-screen'),
@@ -183,333 +182,239 @@
       passwordInput: document.getElementById('password-input'),
       modelList: document.getElementById('model-list'),
       modelTitle: document.getElementById('model-title'),
-      currentModelEl: document.getElementById('current-model'),
+      currentModel: document.getElementById('current-model'),
       modelDesc: document.getElementById('model-desc'),
       arInstructions: document.getElementById('ar-instructions'),
       hitIndicator: document.getElementById('hit-indicator'),
       loading: document.getElementById('loading'),
-      arToggle: document.getElementById('ar-toggle'),
-      webToggle: document.getElementById('web-toggle'),
+      loadingText: document.getElementById('loading-text'),
+      btn3d: document.getElementById('btn-3d'),
+      btnAR: document.getElementById('btn-ar'),
       resetView: document.getElementById('reset-view'),
-      fullscreen: document.getElementById('fullscreen')
+      fullscreen: document.getElementById('fullscreen'),
+      errorOverlay: document.getElementById('error-overlay'),
+      errorMessage: document.getElementById('error-message')
+    };
+
+    const showError = (message) => {
+      els.errorMessage.textContent = message;
+      els.errorOverlay.style.display = 'flex';
     };
 
     const initApp = () => {
-      console.log('🚀 Инициализация приложения');
-      populateModelList();
-      initEventListeners();
+      console.log('🚀 App init');
+      populateModels();
+      bindEvents();
     };
 
-    const populateModelList = () => {
-      elements.modelList.innerHTML = '';
+    const populateModels = () => {
+      els.modelList.innerHTML = '';
       MODELS.forEach(model => {
         const li = document.createElement('li');
         li.textContent = model.name;
-        li.addEventListener('click', () => selectModel(model));
-        elements.modelList.appendChild(li);
+        li.onclick = () => selectModel(model);
+        els.modelList.appendChild(li);
       });
     };
 
     const selectModel = (model) => {
       currentModel = model;
-      elements.modelTitle.textContent = model.name;
-      elements.modelSelect.style.display = 'none';
-      elements.passwordScreen.style.display = 'block';
-      elements.passwordInput.value = '';
-      elements.passwordInput.focus();
-    };
-
-    const showLoading = (show) => {
-      elements.loading.style.display = show ? 'block' : 'none';
+      els.modelTitle.textContent = model.name;
+      els.modelSelect.style.display = 'none';
+      els.passwordScreen.style.display = 'block';
+      els.passwordInput.focus();
     };
 
     const checkPassword = () => {
-      const input = elements.passwordInput.value.trim();
-      if (!currentModel) {
-        alert('Выберите модель!');
-        return;
-      }
-      
-      if (input === currentModel.password) {
-        elements.passwordScreen.style.display = 'none';
-        elements.viewerContainer.style.display = 'block';
-        
-        if (!viewerInitialized) {
-          initViewer();
-          viewerInitialized = true;
-        }
-        
-        showLoading(true);
+      const pass = els.passwordInput.value;
+      if (pass === currentModel.password) {
+        els.passwordScreen.style.display = 'none';
+        els.viewerContainer.style.display = 'block';
+        if (!viewerReady) initViewer();
         loadModel(currentModel);
       } else {
-        alert('❌ Неверный пароль!');
-        elements.passwordInput.value = '';
-        elements.passwordInput.focus();
+        els.passwordInput.value = '';
+        alert('Неверный пароль!');
       }
     };
 
-    const backToSelect = () => {
-      cleanupViewer();
-      elements.passwordScreen.style.display = 'none';
-      elements.modelSelect.style.display = 'block';
-      elements.passwordInput.value = '';
-      elements.viewerContainer.style.display = 'none';
-      viewerInitialized = false;
+    const backToList = () => {
+      cleanup();
+      els.passwordScreen.style.display = 'none';
+      els.modelSelect.style.display = 'block';
     };
 
-    const cleanupViewer = () => {
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-        animationId = null;
-      }
-      
-      if (arSession) {
-        arSession.end();
-        arSession = null;
-      }
-      
-      if (loadedModelGroup && scene) {
-        scene.remove(loadedModelGroup);
-        disposeGroup(loadedModelGroup);
-        loadedModelGroup = null;
-      }
-      
-      if (reticle && scene) {
-        scene.remove(reticle);
-      }
-      
-      if (renderer) {
-        renderer.setAnimationLoop(null);
-        renderer.dispose();
-        if (renderer.domElement.parentNode) {
-          renderer.domElement.parentNode.removeChild(renderer.domElement);
+    const bindEvents = () => {
+      // Intro
+      els.intro.onclick = () => {
+        els.intro.style.display = 'none';
+        els.modelSelect.style.display = 'block';
+      };
+
+      // Password
+      els.btnOpen.onclick = checkPassword;
+      els.btnBack.onclick = backToList;
+      els.passwordInput.onkeypress = (e) => e.key === 'Enter' && checkPassword();
+
+      // Model list
+      els.modelList.onclick = (e) => {
+        if (e.target.tagName === 'LI') {
+          const model = MODELS.find(m => m.name === e.target.textContent);
+          model && selectModel(model);
         }
-        renderer = null;
-      }
-      
-      scene = null;
-      camera = null;
-      controls = null;
-      isARMode = false;
-      elements.arInstructions.style.display = 'none';
-    };
-
-    const initEventListeners = () => {
-      elements.intro.addEventListener('click', () => {
-        elements.intro.style.display = 'none';
-        elements.modelSelect.style.display = 'block';
-      }, { once: true });
-
-      elements.btnOpen.addEventListener('click', checkPassword);
-      elements.btnBack.addEventListener('click', backToSelect);
-      elements.passwordInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') checkPassword();
-      });
+      };
     };
 
     const initViewer = () => {
-      console.log('🎮 Инициализация 3D viewer');
+      console.log('🎮 Init viewer');
       
-      const container = elements.viewerContainer;
-      
-      // Scene
       scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xf0f0f0);
+      scene.background = new THREE.Color(0x2288ee);
 
-      // Camera
-      camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100);
-
-      // Renderer
+      camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 100);
+      
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.xr.enabled = true;
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      container.appendChild(renderer.domElement);
+      els.viewerContainer.appendChild(renderer.domElement);
 
-      // Lighting
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-      scene.add(ambientLight);
-      
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      directionalLight.position.set(10, 10, 5);
-      directionalLight.castShadow = true;
-      scene.add(directionalLight);
+      // Lights
+      scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+      dirLight.position.set(5, 10, 5);
+      scene.add(dirLight);
 
-      // Reticle for AR
-      const reticleGeometry = new THREE.RingGeometry(0.15, 0.2, 32);
-      const reticleMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0x00ff88, 
-        opacity: 0.8, 
-        transparent: true,
-        side: THREE.DoubleSide 
-      });
-      reticle = new THREE.Mesh(reticleGeometry, reticleMaterial);
-      reticle.matrixAutoUpdate = false;
+      // Controls
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.target.set(0, 1, 0);
+      camera.position.set(0, 2, 5);
+
+      // Reticle
+      const reticleGeo = new THREE.RingGeometry(0.1, 0.15, 16);
+      const reticleMat = new THREE.MeshBasicMaterial({color: 0x00ff88, transparent: true, opacity: 0.8});
+      reticle = new THREE.Mesh(reticleGeo, reticleMat);
       reticle.visible = false;
       scene.add(reticle);
 
-      // Controls for 3D mode
-      controls = new OrbitControls(camera, renderer.domElement);
-      controls.enableDamping = true;
-      controls.dampingFactor = 0.05;
-      controls.target.set(0, 1, 0);
-      controls.maxDistance = 20;
-      controls.update();
+      // UI
+      els.btn3d.onclick = () => switchTo3D();
+      els.btnAR.onclick = () => switchToAR();
+      els.resetView.onclick = resetView;
+      els.fullscreen.onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
 
-      // UI Events
-      elements.arToggle.onclick = toggleAR;
-      elements.webToggle.onclick = toggleWebView;
-      elements.resetView.onclick = resetView;
-      elements.fullscreen.onclick = toggleFullscreen;
+      window.onresize = () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      };
 
-      window.addEventListener('resize', onWindowResize);
-      
-      // Touch events for AR placement
-      renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
+      renderer.domElement.ontouchstart = handleARPlacement;
       
       animate();
-      console.log('✅ Viewer готов');
+      viewerReady = true;
     };
 
     const loadModel = (model) => {
-      elements.currentModelEl.textContent = model.name;
-      elements.modelDesc.textContent = model.desc;
-
-      if (loadedModelGroup) {
-        scene.remove(loadedModelGroup);
-        disposeGroup(loadedModelGroup);
-      }
-
-      const loader = new GLTFLoader();
-      loader.load(
-        model.file,
-        (gltf) => {
-          loadedModelGroup = gltf.scene;
-          loadedModelGroup.scale.set(0.5, 0.5, 0.5);
-          loadedModelGroup.position.set(0, 0, 0);
-          loadedModelGroup.traverse((child) => {
-            if (child.isMesh) {
-              child.castShadow = true;
-              child.receiveShadow = true;
-            }
-          });
-          scene.add(loadedModelGroup);
-          
-          resetView();
-          showLoading(false);
-          console.log('✅ Модель загружена');
-        },
-        undefined,
-        (error) => {
-          console.error('❌ Ошибка загрузки:', error);
-          alert('Ошибка загрузки модели. Проверьте файл.');
-          showLoading(false);
-        }
-      );
-    };
-
-    let touchStartX, touchStartY;
-    const onTouchStart = (event) => {
-      if (!isARMode || !hitTestSource || !referenceSpace) return;
+      els.loading.style.display = 'block';
+      els.loadingText.textContent = 'Загрузка ' + model.name;
       
-      event.preventDefault();
-      const touch = event.touches[0];
-      touchStartX = touch.clientX;
-      touchStartY = touch.clientY;
-    };
-
-    const toggleAR = async () => {
-      if (isARMode) {
-        toggleWebView();
-        return;
-      }
-
-      try {
-        if (navigator.xr) {
-          const sessionInit = {
-            requiredFeatures: ['hit-test'],
-            optionalFeatures: ['dom-overlay']
-          };
-          
-          arSession = await navigator.xr.requestSession('immersive-ar', sessionInit);
-          if (arSession) {
-            console.log('🎉 AR сессия запущена');
-            isARMode = true;
-            controls.enabled = false;
-            renderer.xr.setSession(arSession);
-            
-            elements.arInstructions.style.display = 'block';
-            elements.arToggle.textContent = '🖥️ 3D';
-            
-            initAR();
-          }
-        } else {
-          alert('AR не поддерживается браузером');
+      const loader = new GLTFLoader();
+      loader.load(model.file, (gltf) => {
+        if (loadedModelGroup) {
+          scene.remove(loadedModelGroup);
+          disposeObject(loadedModelGroup);
         }
-      } catch (error) {
-        console.error('AR ошибка:', error);
-        alert('AR недоступно. Проверьте разрешения камеры.');
+        
+        loadedModelGroup = gltf.scene;
+        loadedModelGroup.scale.set(0.8, 0.8, 0.8);
+        scene.add(loadedModelGroup);
+        
+        els.currentModel.textContent = model.name;
+        els.modelDesc.textContent = model.desc;
+        els.loading.style.display = 'none';
+        resetView();
+      }, undefined, (err) => {
+        els.loading.style.display = 'none';
+        showError('Не удалось загрузить модель: ' + model.file);
+      });
+    };
+
+    let arHitTestSource = null;
+    const switchToAR = async () => {
+      try {
+        if (!navigator.xr) {
+          showError('AR не поддерживается вашим браузером');
+          return;
+        }
+
+        const session = await navigator.xr.requestSession('immersive-ar', {
+          requiredFeatures: ['hit-test']
+        });
+        
+        if (session) {
+          isARMode = true;
+          els.btn3d.classList.remove('active');
+          els.btnAR.classList.add('active');
+          els.arInstructions.style.display = 'flex';
+          controls.enabled = false;
+          renderer.xr.setSession(session);
+          
+          const refSpace = await session.requestReferenceSpace('viewer');
+          arHitTestSource = await session.requestHitTestSource({ space: refSpace });
+        }
+      } catch (e) {
+        showError('AR недоступно: ' + e.message);
       }
     };
 
-    const toggleWebView = () => {
+    const switchTo3D = () => {
       isARMode = false;
+      els.btnAR.classList.remove('active');
+      els.btn3d.classList.add('active');
+      els.arInstructions.style.display = 'none';
       controls.enabled = true;
-      elements.arInstructions.style.display = 'none';
-      elements.arToggle.textContent = '🌐 AR';
       
       if (arSession) {
         arSession.end();
         arSession = null;
       }
-      
       if (renderer.xr.getSession()) {
         renderer.xr.getSession().end();
       }
     };
 
-    const initAR = async () => {
-      const session = renderer.xr.getSession();
+    let lastTouch = { x: 0, y: 0 };
+    const handleARPlacement = (event) => {
+      if (!isARMode || !arHitTestSource) return;
       
-      session.addEventListener('end', () => {
-        toggleWebView();
-      });
-
-      referenceSpace = await session.requestReferenceSpace('viewer');
-      hitTestSource = await session.requestHitTestSource({ space: referenceSpace });
+      event.preventDefault();
+      const rect = renderer.domElement.getBoundingClientRect();
+      const x = ((event.touches ? event.touches[0].clientX : event.clientX) - rect.left) / rect.width * 2 - 1;
+      const y = -((event.touches ? event.touches[0].clientY : event.clientY) - rect.top) / rect.height * 2 + 1;
+      
+      // Place model at touch position in AR
+      if (loadedModelGroup) {
+        loadedModelGroup.position.set(x * 2, y * 2, -3);
+      }
     };
 
     const resetView = () => {
-      if (!isARMode && controls) {
+      if (controls && !isARMode) {
         controls.reset();
         camera.position.set(0, 2, 5);
       }
     };
 
-    const toggleFullscreen = () => {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      } else {
-        document.documentElement.requestFullscreen();
-      }
-    };
-
-    const onWindowResize = () => {
-      if (camera && renderer) {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      }
-    };
-
-    const disposeGroup = (group) => {
-      group.traverse((child) => {
+    const disposeObject = (obj) => {
+      if (!obj) return;
+      obj.traverse((child) => {
         if (child.geometry) child.geometry.dispose();
-        if (child.material && !child.material.isBasicMaterial) {
+        if (child.material) {
           if (Array.isArray(child.material)) {
-            child.material.forEach(mat => mat.dispose());
+            child.material.forEach(m => m.dispose());
           } else {
             child.material.dispose();
           }
@@ -517,53 +422,20 @@
       });
     };
 
+    const cleanup = () => {
+      if (animationId) cancelAnimationFrame(animationId);
+      if (arSession) arSession.end();
+      disposeObject(loadedModelGroup);
+      loadedModelGroup = null;
+      isARMode = false;
+    };
+
     const animate = () => {
       animationId = requestAnimationFrame(animate);
       
-      if (controls && !isARMode) {
-        controls.update();
-      }
+      if (controls && !isARMode) controls.update();
       
-      if (isARMode && renderer.xr.getSession() && hitTestSource) {
-        updateAR();
-      }
-      
-      if (renderer) {
-        renderer.render(scene, camera);
-      }
-    };
-
-    const updateAR = () => {
-      const session = renderer.xr.getSession();
-      const frame = session.frame;
-      
-      if (frame) {
-        const referenceSpace = renderer.xr.getReferenceSpace();
-        const hitTestResults = frame.getHitTestResults(hitTestSource);
-        
-        if (hitTestResults.length > 0) {
-          const hit = hitTestResults[0];
-          const hitPose = hit.getPose(referenceSpace);
-          
-          reticle.matrix.fromArray(hitPose.transform.matrix);
-          reticle.visible = true;
-          elements.hitIndicator.style.display = 'block';
-          
-          // Place model on touch
-          if (touchStartX !== undefined) {
-            loadedModelGroup.matrix.fromArray(hitPose.transform.matrix);
-            loadedModelGroup.matrix.decompose(
-              loadedModelGroup.position,
-              loadedModelGroup.quaternion,
-              loadedModelGroup.scale
-            );
-            touchStartX = undefined;
-          }
-        } else {
-          reticle.visible = false;
-          elements.hitIndicator.style.display = 'none';
-        }
-      }
+      if (renderer) renderer.render(scene, camera);
     };
 
     document.addEventListener('DOMContentLoaded', initApp);
