@@ -6,7 +6,7 @@
   <title>3D-каталог оборудования | AR/Web</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; overflow: hidden; background: #000; }
+    body { font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; overflow: hidden; background: #000; -webkit-user-select: none; user-select: none; }
 
     #intro { 
       position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
@@ -28,8 +28,8 @@
     #model-list { list-style: none; margin: 20px 0; padding: 0; }
     #model-list li { 
       background: rgba(255,255,255,0.1); margin: 10px 0; padding: 15px; border-radius: 12px; 
-      cursor: pointer; transition: all 0.3s; backdrop-filter: blur(10px); user-select: none; 
-      touch-action: manipulation; font-size: 16px;
+      cursor: pointer; transition: all 0.3s; backdrop-filter: blur(10px); touch-action: manipulation;
+      font-size: 16px; color: white;
     }
     #model-list li:hover, #model-list li:active { background: rgba(255,255,255,0.2); transform: translateX(10px); }
 
@@ -40,15 +40,18 @@
       max-width: 90vw;
     }
     #password-input { 
-      padding: 15px; font-size: 18px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.3); 
+      padding: 15px 20px; font-size: 18px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.3); 
       background: rgba(255,255,255,0.1); color: white; width: 250px; max-width: 80vw; 
       margin: 20px auto; display: block; outline: none; 
+      -webkit-appearance: none; -webkit-user-select: text; ime-mode: active;
+      font-family: inherit;
     }
     #password-input::placeholder { color: rgba(255,255,255,0.6); }
     .btn { 
       background: linear-gradient(45deg, #667eea, #764ba2); color: white; border: none; 
       padding: 15px 35px; border-radius: 25px; cursor: pointer; font-size: 16px; margin: 10px; 
       touch-action: manipulation; transition: all 0.2s; font-weight: 500; min-width: 160px;
+      -webkit-appearance: none;
     }
     .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
     .btn:active { transform: translateY(0); }
@@ -73,7 +76,7 @@
     #ar-instructions { 
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; 
       text-align: center; z-index: 101; display: none; backdrop-filter: blur(20px); 
-      pointer-events: none; max-width: 80%;
+      pointer-events: none; max-width: 80%; flex-direction: column; justify-content: center; gap: 10px;
     }
     .hit-indicator { 
       position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); 
@@ -117,7 +120,7 @@
 
   <div id="password-screen">
     <h3 id="model-title">Модель 1</h3>
-    <input type="password" id="password-input" placeholder="Введите пароль">
+    <input type="text" id="password-input" placeholder="Введите пароль" autocomplete="new-password">
     <br>
     <button class="btn" id="btn-open">Открыть модель</button>
     <button class="btn btn-secondary" id="btn-back">Назад</button>
@@ -147,7 +150,7 @@
   </div>
 
   <div id="error-overlay" class="error-overlay">
-    <div>
+    <div style="padding: 40px; max-width: 400px;">
       <h3>Ошибка</h3>
       <p id="error-message"></p>
       <button class="btn" onclick="document.getElementById('error-overlay').style.display='none'">OK</button>
@@ -160,15 +163,15 @@
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
     const MODELS = [
-      { id: 1, name: 'Транспортер', file: 'model1.glb', password: '123', desc: 'Промышленный транспorтер' },
+      { id: 1, name: 'Транспортер', file: 'model1.glb', password: '123', desc: 'Промышленный транспортер' },
       { id: 2, name: 'Станок CNC', file: 'model2.glb', password: '321', desc: 'Фрезерный станок' },
       { id: 3, name: 'Сварочный аппарат', file: 'model3.glb', password: '231', desc: 'Полуавтомат сварки' }
     ];
 
-    let scene, camera, renderer, controls;
+    let scene, camera, renderer, controls, reticle;
     let currentModel, loadedModelGroup = null;
     let isARMode = false;
-    let animationId, arSession = null;
+    let animationId, arSession = null, arHitTestSource = null;
     let viewerReady = false;
 
     // DOM элементы
@@ -222,7 +225,12 @@
       els.modelTitle.textContent = model.name;
       els.modelSelect.style.display = 'none';
       els.passwordScreen.style.display = 'block';
-      els.passwordInput.focus();
+      els.passwordInput.value = '';
+      // Принудительный фокус для iOS с задержкой [web:6][web:10]
+      setTimeout(() => {
+        els.passwordInput.focus();
+        els.passwordInput.click();
+      }, 100);
     };
 
     const checkPassword = () => {
@@ -231,9 +239,11 @@
         els.passwordScreen.style.display = 'none';
         els.viewerContainer.style.display = 'block';
         if (!viewerReady) initViewer();
+        els.loading.style.display = 'block';
         loadModel(currentModel);
       } else {
         els.passwordInput.value = '';
+        els.passwordInput.focus();
         alert('Неверный пароль!');
       }
     };
@@ -251,10 +261,25 @@
         els.modelSelect.style.display = 'block';
       };
 
-      // Password
+      // Password - workaround для iOS Safari [web:1]
+      els.passwordInput.oninput = (e) => {
+        if (e.target.value.length === 1) {
+          e.target.type = 'password';
+        }
+      };
+      els.passwordInput.onfocus = (e) => {
+        if (e.target.value.length === 0) {
+          e.target.type = 'text'; // Начинаем с text для показа клавиатуры
+        }
+      };
       els.btnOpen.onclick = checkPassword;
       els.btnBack.onclick = backToList;
-      els.passwordInput.onkeypress = (e) => e.key === 'Enter' && checkPassword();
+      els.passwordInput.onkeypress = (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          checkPassword();
+        }
+      };
 
       // Model list
       els.modelList.onclick = (e) => {
@@ -303,12 +328,20 @@
       els.btn3d.onclick = () => switchTo3D();
       els.btnAR.onclick = () => switchToAR();
       els.resetView.onclick = resetView;
-      els.fullscreen.onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+      els.fullscreen.onclick = () => {
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        } else {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      };
 
       window.onresize = () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        if (camera && renderer) {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        }
       };
 
       renderer.domElement.ontouchstart = handleARPlacement;
@@ -318,7 +351,6 @@
     };
 
     const loadModel = (model) => {
-      els.loading.style.display = 'block';
       els.loadingText.textContent = 'Загрузка ' + model.name;
       
       const loader = new GLTFLoader();
@@ -342,7 +374,6 @@
       });
     };
 
-    let arHitTestSource = null;
     const switchToAR = async () => {
       try {
         if (!navigator.xr) {
@@ -350,20 +381,20 @@
           return;
         }
 
-        const session = await navigator.xr.requestSession('immersive-ar', {
+        arSession = await navigator.xr.requestSession('immersive-ar', {
           requiredFeatures: ['hit-test']
         });
         
-        if (session) {
+        if (arSession) {
           isARMode = true;
           els.btn3d.classList.remove('active');
           els.btnAR.classList.add('active');
           els.arInstructions.style.display = 'flex';
           controls.enabled = false;
-          renderer.xr.setSession(session);
+          renderer.xr.setSession(arSession);
           
-          const refSpace = await session.requestReferenceSpace('viewer');
-          arHitTestSource = await session.requestHitTestSource({ space: refSpace });
+          const refSpace = await arSession.requestReferenceSpace('viewer');
+          arHitTestSource = await arSession.requestHitTestSource({ space: refSpace });
         }
       } catch (e) {
         showError('AR недоступно: ' + e.message);
@@ -395,7 +426,6 @@
       const x = ((event.touches ? event.touches[0].clientX : event.clientX) - rect.left) / rect.width * 2 - 1;
       const y = -((event.touches ? event.touches[0].clientY : event.clientY) - rect.top) / rect.height * 2 + 1;
       
-      // Place model at touch position in AR
       if (loadedModelGroup) {
         loadedModelGroup.position.set(x * 2, y * 2, -3);
       }
