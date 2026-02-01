@@ -101,6 +101,13 @@
       background: rgba(0,0,0,0.9); z-index: 2000; display: none; 
       justify-content: center; align-items: center; color: white; text-align: center;
     }
+
+    #safari-warning {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(255,0,0,0.95); color: white; padding: 30px; border-radius: 20px;
+      text-align: center; z-index: 1001; display: none; max-width: 90vw;
+      backdrop-filter: blur(20px); box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    }
   </style>
 
   <script type="importmap">
@@ -126,6 +133,13 @@
     <button class="btn btn-secondary" id="btn-back">Назад</button>
   </div>
 
+  <div id="safari-warning">
+    <h3>⚠️ AR доступно только в Safari</h3>
+    <p>Для просмотра в AR режиме используйте iPhone/iPad с Safari.</p>
+    <p><strong>В других браузерах доступен только 3D просмотр.</strong></p>
+    <button class="btn" id="continue-3d">Продолжить в 3D</button>
+  </div>
+
   <div id="loading">
     <div class="spinner"></div>
     <p id="loading-text">Загрузка модели...</p>
@@ -134,7 +148,7 @@
   <div id="viewer-container">
     <div id="ui">
       <button id="btn-3d" class="active">🖥️ 3D</button>
-      <button id="btn-ar">🌐 AR</button>
+      <button id="btn-ar">🌐 AR (Safari)</button>
       <button id="reset-view">🔄 Сброс</button>
       <button id="fullscreen">📱 Экран</button>
     </div>
@@ -173,15 +187,18 @@
     let isARMode = false;
     let animationId, arSession = null, arHitTestSource = null;
     let viewerReady = false;
+    let isSafari = false;
 
     // DOM элементы
     const els = {
       intro: document.getElementById('intro'),
       modelSelect: document.getElementById('model-select'),
       passwordScreen: document.getElementById('password-screen'),
+      safariWarning: document.getElementById('safari-warning'),
       viewerContainer: document.getElementById('viewer-container'),
       btnOpen: document.getElementById('btn-open'),
       btnBack: document.getElementById('btn-back'),
+      continue3d: document.getElementById('continue-3d'),
       passwordInput: document.getElementById('password-input'),
       modelList: document.getElementById('model-list'),
       modelTitle: document.getElementById('model-title'),
@@ -206,6 +223,8 @@
 
     const initApp = () => {
       console.log('🚀 App init');
+      // Проверка Safari
+      isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
       populateModels();
       bindEvents();
     };
@@ -224,9 +243,14 @@
       currentModel = model;
       els.modelTitle.textContent = model.name;
       els.modelSelect.style.display = 'none';
+      
+      if (!isSafari) {
+        els.safariWarning.style.display = 'block';
+        return;
+      }
+      
       els.passwordScreen.style.display = 'block';
       els.passwordInput.value = '';
-      // Принудительный фокус для iOS с задержкой [web:6][web:10]
       setTimeout(() => {
         els.passwordInput.focus();
         els.passwordInput.click();
@@ -248,9 +272,18 @@
       }
     };
 
+    const continueTo3D = () => {
+      els.safariWarning.style.display = 'none';
+      els.viewerContainer.style.display = 'block';
+      if (!viewerReady) initViewer();
+      els.loading.style.display = 'block';
+      loadModel(currentModel);
+    };
+
     const backToList = () => {
       cleanup();
       els.passwordScreen.style.display = 'none';
+      els.safariWarning.style.display = 'none';
       els.modelSelect.style.display = 'block';
     };
 
@@ -261,7 +294,10 @@
         els.modelSelect.style.display = 'block';
       };
 
-      // Password - workaround для iOS Safari [web:1]
+      // Safari warning
+      els.continue3d.onclick = continueTo3D;
+
+      // Password
       els.passwordInput.oninput = (e) => {
         if (e.target.value.length === 1) {
           e.target.type = 'password';
@@ -269,7 +305,7 @@
       };
       els.passwordInput.onfocus = (e) => {
         if (e.target.value.length === 0) {
-          e.target.type = 'text'; // Начинаем с text для показа клавиатуры
+          e.target.type = 'text';
         }
       };
       els.btnOpen.onclick = checkPassword;
@@ -278,14 +314,6 @@
         if (e.key === 'Enter') {
           e.preventDefault();
           checkPassword();
-        }
-      };
-
-      // Model list
-      els.modelList.onclick = (e) => {
-        if (e.target.tagName === 'LI') {
-          const model = MODELS.find(m => m.name === e.target.textContent);
-          model && selectModel(model);
         }
       };
     };
@@ -301,7 +329,11 @@
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.xr.enabled = true;
+      
+      if (isSafari) {
+        renderer.xr.enabled = true;
+      }
+      
       renderer.shadowMap.enabled = true;
       els.viewerContainer.appendChild(renderer.domElement);
 
@@ -317,14 +349,14 @@
       controls.target.set(0, 1, 0);
       camera.position.set(0, 2, 5);
 
-      // Reticle
+      // Reticle for AR
       const reticleGeo = new THREE.RingGeometry(0.1, 0.15, 16);
       const reticleMat = new THREE.MeshBasicMaterial({color: 0x00ff88, transparent: true, opacity: 0.8});
       reticle = new THREE.Mesh(reticleGeo, reticleMat);
       reticle.visible = false;
       scene.add(reticle);
 
-      // UI
+      // UI Events
       els.btn3d.onclick = () => switchTo3D();
       els.btnAR.onclick = () => switchToAR();
       els.resetView.onclick = resetView;
@@ -344,7 +376,10 @@
         }
       };
 
-      renderer.domElement.ontouchstart = handleARPlacement;
+      if (isSafari) {
+        renderer.domElement.ontouchstart = handleARPlacement;
+        renderer.domElement.onmousedown = handleARPlacement;
+      }
       
       animate();
       viewerReady = true;
@@ -362,6 +397,7 @@
         
         loadedModelGroup = gltf.scene;
         loadedModelGroup.scale.set(0.8, 0.8, 0.8);
+        loadedModelGroup.position.set(0, 0, 0);
         scene.add(loadedModelGroup);
         
         els.currentModel.textContent = model.name;
@@ -375,29 +411,39 @@
     };
 
     const switchToAR = async () => {
+      if (!isSafari) {
+        showError('AR доступно только в Safari на iOS');
+        return;
+      }
+
       try {
         if (!navigator.xr) {
           showError('AR не поддерживается вашим браузером');
           return;
         }
 
+        els.btn3d.classList.remove('active');
+        els.btnAR.classList.add('active');
+        els.arInstructions.style.display = 'flex';
+        controls.enabled = false;
+        isARMode = true;
+
         arSession = await navigator.xr.requestSession('immersive-ar', {
           requiredFeatures: ['hit-test']
         });
         
         if (arSession) {
-          isARMode = true;
-          els.btn3d.classList.remove('active');
-          els.btnAR.classList.add('active');
-          els.arInstructions.style.display = 'flex';
-          controls.enabled = false;
           renderer.xr.setSession(arSession);
           
           const refSpace = await arSession.requestReferenceSpace('viewer');
           arHitTestSource = await arSession.requestHitTestSource({ space: refSpace });
+          
+          els.hitIndicator.style.display = 'block';
         }
       } catch (e) {
-        showError('AR недоступно: ' + e.message);
+        console.error('AR Error:', e);
+        showError('AR недоступно: ' + e.message + '\nИспользуйте кнопку 3D');
+        switchTo3D();
       }
     };
 
@@ -406,11 +452,13 @@
       els.btnAR.classList.remove('active');
       els.btn3d.classList.add('active');
       els.arInstructions.style.display = 'none';
+      els.hitIndicator.style.display = 'none';
       controls.enabled = true;
       
       if (arSession) {
         arSession.end();
         arSession = null;
+        arHitTestSource = null;
       }
       if (renderer.xr.getSession()) {
         renderer.xr.getSession().end();
@@ -418,23 +466,41 @@
     };
 
     let lastTouch = { x: 0, y: 0 };
-    const handleARPlacement = (event) => {
-      if (!isARMode || !arHitTestSource) return;
+    const handleARPlacement = async (event) => {
+      if (!isARMode || !arHitTestSource || !arSession) return;
       
       event.preventDefault();
-      const rect = renderer.domElement.getBoundingClientRect();
-      const x = ((event.touches ? event.touches[0].clientX : event.clientX) - rect.left) / rect.width * 2 - 1;
-      const y = -((event.touches ? event.touches[0].clientY : event.clientY) - rect.top) / rect.height * 2 + 1;
       
-      if (loadedModelGroup) {
-        loadedModelGroup.position.set(x * 2, y * 2, -3);
+      const frame = await arSession.requestAnimationFrame(handleARPlacement);
+      const referenceSpace = await arSession.requestReferenceSpace('viewer');
+      const hitTestResults = await arSession.requestHitTestSourceForCurrentFrame({ space: arHitTestSource });
+      
+      if (hitTestResults.length > 0) {
+        const hit = hitTestResults[0];
+        const hitPose = frame.getPose(hit, referenceSpace);
+        
+        if (loadedModelGroup) {
+          loadedModelGroup.position.fromArray(hitPose.transform.position);
+          loadedModelGroup.quaternion.fromArray(hitPose.transform.orientation);
+          loadedModelGroup.matrixAutoUpdate = false;
+          loadedModelGroup.updateMatrix();
+        }
+        
+        els.hitIndicator.style.display = 'none';
       }
+      
+      arSession.requestAnimationFrame(handleARPlacement);
     };
 
     const resetView = () => {
       if (controls && !isARMode) {
         controls.reset();
         camera.position.set(0, 2, 5);
+      }
+      if (loadedModelGroup && !isARMode) {
+        loadedModelGroup.position.set(0, 0, 0);
+        loadedModelGroup.rotation.set(0, 0, 0);
+        loadedModelGroup.scale.set(0.8, 0.8, 0.8);
       }
     };
 
