@@ -101,7 +101,8 @@
       // Добавляйте свои: { id: 4, name: '...', file: 'model4.glb', password: 'pass', desc: '...' }
     ];
 
-    let scene, camera, renderer, controls, currentModel;
+    let scene, camera, renderer, controls, currentModel, loadedModelGroup = null;
+    let animationId = null;
 
     // Инициализация
     function initApp() {
@@ -126,21 +127,26 @@
       document.getElementById('model-title').textContent = model.name;
       document.getElementById('model-select').style.display = 'none';
       document.getElementById('password-screen').style.display = 'block';
+      document.getElementById('password-input').value = ''; // Очистка поля
     }
 
     function checkPassword() {
-      const input = document.getElementById('password-input').value;
+      const input = document.getElementById('password-input').value.trim();
       if (input === currentModel.password) {
         document.getElementById('password-screen').style.display = 'none';
+        document.getElementById('viewer-container').style.display = 'block';
         loadModel(currentModel);
       } else {
         alert('Неверный пароль!');
+        document.getElementById('password-input').value = '';
+        document.getElementById('password-input').focus();
       }
     }
 
     function backToSelect() {
       document.getElementById('password-screen').style.display = 'none';
       document.getElementById('model-select').style.display = 'block';
+      document.getElementById('password-input').value = '';
     }
 
     function initViewer() {
@@ -164,33 +170,66 @@
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
 
-      window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      });
+      window.addEventListener('resize', onWindowResize);
 
-      document.getElementById('fullscreen').onclick = () => {
-        document.documentElement.requestFullscreen?.();
-      };
+      document.getElementById('fullscreen').onclick = toggleFullscreen;
       document.getElementById('reset').onclick = () => controls.reset();
     }
 
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
     function loadModel(model) {
+      // Обновляем инфо
+      document.getElementById('current-model').textContent = model.name;
+      document.getElementById('model-desc').textContent = model.desc;
+
+      // Очищаем предыдущую модель
+      if (loadedModelGroup) {
+        scene.remove(loadedModelGroup);
+        loadedModelGroup.traverse((child) => {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) child.material.dispose();
+        });
+        loadedModelGroup = null;
+      }
+
       const loader = new GLTFLoader();
-      document.getElementById('model-info').innerHTML = `
-        <h3>${model.name}</h3>
-        <p>${model.desc}</p>
-      `;
-      
-      loader.load(model.file, (gltf) => {
-        if (currentModel) scene.remove(currentModel.scene);
-        currentModel.scene = gltf.scene;
-        currentModel.scene.scale.set(1, 1, 1);  // НАСТРОЙТЕ!
-        scene.add(currentModel.scene);
-        document.getElementById('viewer-container').style.display = 'block';
-        animate();
-      });
+      loader.load(
+        model.file,
+        (gltf) => {
+          loadedModelGroup = gltf.scene;
+          loadedModelGroup.scale.set(1, 1, 1); // НАСТРОЙТЕ масштаб под вашу модель (например, 0.01 для CAD)
+          loadedModelGroup.position.set(0, 0, 0);
+          scene.add(loadedModelGroup);
+          console.log('Модель загружена:', model.name);
+          if (!animationId) animate(); // Запуск анимации только если не запущена
+        },
+        (progress) => {
+          console.log('Загрузка:', (progress.loaded / progress.total * 100) + '%');
+        },
+        (error) => {
+          console.error('Ошибка загрузки модели:', error);
+          alert('Ошибка загрузки модели: ' + model.file + '. Проверьте файл и консоль (F12).');
+          // Fallback: тестовая геометрия
+          const geometry = new THREE.BoxGeometry(1, 1, 1);
+          const material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+          loadedModelGroup = new THREE.Group();
+          loadedModelGroup.add(new THREE.Mesh(geometry, material));
+          scene.add(loadedModelGroup);
+        }
+      );
     }
 
     function showIntro() {
@@ -204,7 +243,7 @@
     }
 
     function animate() {
-      requestAnimationFrame(animate);
+      animationId = requestAnimationFrame(animate);
       controls.update();
       renderer.render(scene, camera);
     }
@@ -213,4 +252,3 @@
   </script>
 </body>
 </html>
-
