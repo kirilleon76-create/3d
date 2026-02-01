@@ -25,7 +25,7 @@
     #model-list li { 
       background: rgba(255,255,255,0.1); margin: 10px 0; padding: 15px; 
       border-radius: 12px; cursor: pointer; transition: all 0.3s; 
-      backdrop-filter: blur(10px); 
+      backdrop-filter: blur(10px); user-select: none; 
     }
     #model-list li:hover, #model-list li:active { background: rgba(255,255,255,0.2); transform: translateX(10px); }
 
@@ -36,26 +36,71 @@
       text-align: center; display: none; backdrop-filter: blur(20px); 
       box-shadow: 0 20px 60px rgba(0,0,0,0.8); 
     }
-    #password-input { padding: 15px; font-size: 18px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; width: 250px; margin: 20px; }
+    #password-input { 
+      padding: 15px; font-size: 18px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.3); 
+      background: rgba(255,255,255,0.1); color: white; width: 250px; margin: 20px; 
+      outline: none; 
+    }
     #password-input::placeholder { color: rgba(255,255,255,0.6); }
-    .btn { background: linear-gradient(45deg, #667eea, #764ba2); color: white; border: none; padding: 12px 30px; border-radius: 25px; cursor: pointer; font-size: 16px; margin: 10px; touch-action: manipulation; }
+    .btn { 
+      background: linear-gradient(45deg, #667eea, #764ba2); color: white; border: none; 
+      padding: 12px 30px; border-radius: 25px; cursor: pointer; font-size: 16px; margin: 10px; 
+      touch-action: manipulation; transition: all 0.2s; 
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+    .btn:active { transform: translateY(0); }
     .btn-secondary { background: rgba(255,255,255,0.2); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
     /* Viewer */
     #viewer-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; }
     #ui { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 10px; }
-    #ui button { background: rgba(255,255,255,0.95); border: none; padding: 12px 20px; border-radius: 25px; cursor: pointer; font-size: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); touch-action: manipulation; }
+    #ui button { 
+      background: rgba(255,255,255,0.95); border: none; padding: 12px 20px; border-radius: 25px; 
+      cursor: pointer; font-size: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
+      touch-action: manipulation; transition: all 0.2s; 
+    }
     #ui button:hover, #ui button:active { background: white; transform: translateY(-2px); }
-    #model-info { position: absolute; bottom: 20px; left: 20px; color: white; z-index: 100; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px; max-width: 300px; }
+    #model-info { 
+      position: absolute; bottom: 20px; left: 20px; color: white; z-index: 100; 
+      background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px; max-width: 300px; 
+    }
 
     /* AR индикатор */
-    #ar-instructions { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; text-align: center; z-index: 101; display: none; backdrop-filter: blur(10px); }
-    .hit-indicator { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); width: 100px; height: 100px; border: 3px solid #00ff88; border-radius: 50%; display: none; animation: pulse 1s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); } 50% { opacity: 0.5; transform: translateX(-50%) scale(1.2); } }
+    #ar-instructions { 
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; 
+      text-align: center; z-index: 101; display: none; backdrop-filter: blur(10px); 
+    }
+    .hit-indicator { 
+      position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); 
+      width: 100px; height: 100px; border: 3px solid #00ff88; border-radius: 50%; 
+      display: none; animation: pulse 1s infinite; 
+    }
+    @keyframes pulse { 
+      0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); } 
+      50% { opacity: 0.5; transform: translateX(-50%) scale(1.2); } 
+    }
+
+    /* Loading */
+    #loading { 
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+      color: white; z-index: 1002; display: none; text-align: center; 
+    }
+    .spinner { 
+      border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid white; 
+      border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; 
+      margin: 0 auto 20px; 
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 
   <script type="importmap">
-    { "imports": { "three": "https://unpkg.com/three@0.169.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/" } }
+    { 
+      "imports": { 
+        "three": "https://unpkg.com/three@0.169.0/build/three.module.js", 
+        "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/" 
+      } 
+    }
   </script>
 </head>
 <body>
@@ -78,6 +123,12 @@
     <br>
     <button class="btn" id="btn-open">Открыть модель</button>
     <button class="btn btn-secondary" id="btn-back">Назад</button>
+  </div>
+
+  <!-- Loading -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>Загрузка модели...</p>
   </div>
 
   <!-- 3D/AR Viewer -->
@@ -108,6 +159,8 @@
     import { BoxLineGeometry } from 'three/addons/geometries/BoxLineGeometry.js';
 
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    
     const MODELS = [
       { id: 1, name: 'Транспортер', file: 'model1.glb', password: '123', desc: 'Промышленный транспортер' },
       { id: 2, name: 'Станок CNC', file: 'model2.glb', password: '321', desc: 'Фрезерный станок' },
@@ -121,166 +174,212 @@
     let controller1, controller2, controllerGrip1, controllerGrip2;
     let controllerModelFactory;
     let animationId;
+    let viewerInitialized = false;
+
+    const elements = {
+      intro: document.getElementById('intro'),
+      modelSelect: document.getElementById('model-select'),
+      passwordScreen: document.getElementById('password-screen'),
+      viewerContainer: document.getElementById('viewer-container'),
+      btnOpen: document.getElementById('btn-open'),
+      btnBack: document.getElementById('btn-back'),
+      passwordInput: document.getElementById('password-input'),
+      modelList: document.getElementById('model-list'),
+      modelTitle: document.getElementById('model-title'),
+      currentModel: document.getElementById('current-model'),
+      modelDesc: document.getElementById('model-desc'),
+      arInstructions: document.getElementById('ar-instructions'),
+      loading: document.getElementById('loading'),
+      arToggle: document.getElementById('ar-toggle'),
+      webToggle: document.getElementById('web-toggle'),
+      resetView: document.getElementById('reset-view'),
+      fullscreen: document.getElementById('fullscreen')
+    };
 
     const initApp = () => {
+      console.log('Инициализация приложения');
       populateModelList();
-      // НЕ инициализируем viewer здесь - только после клика!
+      initEventListeners();
     };
 
     const populateModelList = () => {
-      const list = document.getElementById('model-list');
-      list.innerHTML = '';
+      elements.modelList.innerHTML = '';
       MODELS.forEach(model => {
         const li = document.createElement('li');
         li.textContent = model.name;
         li.onclick = () => selectModel(model);
-        list.appendChild(li);
+        elements.modelList.appendChild(li);
       });
     };
 
     const selectModel = (model) => {
       currentModel = model;
-      document.getElementById('model-title').textContent = model.name;
-      document.getElementById('model-select').style.display = 'none';
-      document.getElementById('password-screen').style.display = 'block';
-      document.getElementById('password-input').value = '';
-      document.getElementById('password-input').focus();
+      elements.modelTitle.textContent = model.name;
+      elements.modelSelect.style.display = 'none';
+      elements.passwordScreen.style.display = 'block';
+      elements.passwordInput.value = '';
+      elements.passwordInput.focus();
+    };
+
+    const showLoading = (show) => {
+      elements.loading.style.display = show ? 'block' : 'none';
     };
 
     const checkPassword = () => {
-      const input = document.getElementById('password-input').value.trim();
+      console.log('Проверка пароля');
+      const input = elements.passwordInput.value.trim();
+      
+      if (!currentModel) {
+        alert('Выберите модель!');
+        return;
+      }
+      
       if (input === currentModel.password) {
-        document.getElementById('password-screen').style.display = 'none';
-        document.getElementById('viewer-container').style.display = 'block';
-        initViewer(); // Инициализация ТОЛЬКО здесь, после user gesture
+        console.log('Пароль верный, инициализация viewer');
+        elements.passwordScreen.style.display = 'none';
+        elements.viewerContainer.style.display = 'block';
+        
+        if (!viewerInitialized) {
+          initViewer();
+          viewerInitialized = true;
+        }
+        
+        showLoading(true);
         loadModel(currentModel);
       } else {
         alert('Неверный пароль!');
-        document.getElementById('password-input').value = '';
-        document.getElementById('password-input').focus();
+        elements.passwordInput.value = '';
+        elements.passwordInput.focus();
       }
     };
 
     const backToSelect = () => {
-      document.getElementById('password-screen').style.display = 'none';
-      document.getElementById('model-select').style.display = 'block';
-      document.getElementById('password-input').value = '';
+      console.log('Возврат к выбору моделей');
+      elements.passwordScreen.style.display = 'none';
+      elements.modelSelect.style.display = 'block';
+      elements.passwordInput.value = '';
+      
+      cleanupViewer();
+      elements.viewerContainer.style.display = 'none';
+      viewerInitialized = false;
+    };
+
+    const cleanupViewer = () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      
       if (loadedModelGroup) {
         if (scene) scene.remove(loadedModelGroup);
+        disposeGroup(loadedModelGroup);
         loadedModelGroup = null;
       }
+      
       if (renderer) {
         renderer.setAnimationLoop(null);
+        if (renderer.xr.getSession()) {
+          renderer.xr.getSession().end();
+        }
         renderer.dispose();
+        renderer.domElement.remove();
+        renderer = null;
       }
-      exitAR();
-      document.getElementById('viewer-container').style.display = 'none';
+      
+      scene = null;
+      camera = null;
+      controls = null;
+      isARMode = false;
+      hitTestSource = null;
+      hitTestSourceRequested = false;
+      
+      elements.arInstructions.style.display = 'none';
     };
 
     const initEventListeners = () => {
-      document.getElementById('btn-open').onclick = checkPassword;
-      document.getElementById('btn-back').onclick = backToSelect;
-      document.getElementById('password-input').addEventListener('keypress', (e) => {
+      // Intro click
+      elements.intro.addEventListener('click', () => {
+        elements.intro.style.display = 'none';
+        elements.modelSelect.style.display = 'block';
+      }, { once: true });
+
+      // Password screen
+      elements.btnOpen.addEventListener('click', checkPassword);
+      elements.btnBack.addEventListener('click', backToSelect);
+      elements.passwordInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') checkPassword();
       });
-      document.getElementById('ar-toggle').onclick = toggleAR;
-      document.getElementById('web-toggle').onclick = () => { 
-        isARMode = false; 
-        if (renderer) renderer.xr.enabled = false; 
-        if (controls) controls.enabled = true; 
-        document.getElementById('ar-instructions').style.display = 'none'; 
-      };
-      document.getElementById('reset-view').onclick = resetView;
-      document.getElementById('fullscreen').onclick = toggleFullscreen;
+
+      // Model list
+      elements.modelList.addEventListener('click', (e) => {
+        if (e.target.tagName === 'LI') {
+          const model = MODELS.find(m => m.name === e.target.textContent);
+          if (model) selectModel(model);
+        }
+      });
     };
 
     const initViewer = () => {
-      const container = document.getElementById('viewer-container');
+      console.log('Инициализация 3D viewer');
       
+      const container = elements.viewerContainer;
+      
+      // Scene
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0xdddddd);
 
-      camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+      // Camera
+      camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100);
+      camera.position.set(0, 2, 5);
 
+      // Renderer
       const rendererOptions = {
-        antialias: !isMobile, // Отключаем на мобильных
+        antialias: !isMobile,
         alpha: true,
-        powerPreference: isMobile ? 'default' : 'high-performance'
+        powerPreference: 'default'
       };
+      
       renderer = new THREE.WebGLRenderer(rendererOptions);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.xr.enabled = true;
-      renderer.shadowMap.enabled = !isMobile; // Отключаем тени на мобильных
+      renderer.xr.enabled = !isIOS; // Отключаем XR на iOS для стабильности
+      renderer.shadowMap.enabled = false;
       container.appendChild(renderer.domElement);
 
-      // Минимальное освещение
-      const ambient = new THREE.AmbientLight(0xffffff, 0.8);
-      scene.add(ambient);
-      const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-      dirLight.position.set(0, 10, 5);
-      scene.add(dirLight);
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+      scene.add(ambientLight);
+      
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+      directionalLight.position.set(1, 1, 1);
+      scene.add(directionalLight);
 
-      // Reticle только для AR
-      const reticleGeometry = new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2);
-      const reticleMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff88, opacity: 0.7, transparent: true });
-      reticle = new THREE.Mesh(reticleGeometry, reticleMaterial);
-      reticle.matrixAutoUpdate = false;
-      reticle.visible = false;
-      scene.add(reticle);
-
-      // Контроллеры только если поддержка XR
-      if ('xr' in navigator) {
-        controllerModelFactory = new XRControllerModelFactory();
-        controller1 = renderer.xr.getController(0);
-        controller1.addEventListener('selectstart', onSelectStart);
-        scene.add(controller1);
-        controllerGrip1 = renderer.xr.getControllerGrip(0);
-        controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
-        scene.add(controllerGrip1);
-
-        controller2 = renderer.xr.getController(1);
-        controller2.addEventListener('selectstart', onSelectStart);
-        scene.add(controller2);
-        controllerGrip2 = renderer.xr.getControllerGrip(1);
-        controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
-        scene.add(controllerGrip2);
-      }
-
+      // Controls
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
-      controls.target.set(0, 1.6, 0);
+      controls.target.set(0, 1, 0);
+      controls.update();
 
+      // UI buttons
+      elements.arToggle.addEventListener('click', toggleAR);
+      elements.webToggle.addEventListener('click', toggleWebView);
+      elements.resetView.addEventListener('click', resetView);
+      elements.fullscreen.addEventListener('click', toggleFullscreen);
+
+      // Resize handler
       window.addEventListener('resize', onWindowResize);
+
+      // Start render loop
+      animate();
       
-      initEventListeners(); // Теперь безопасно
-      animate(); // Запускаем рендер
-    };
-
-    let selectedObject = null;
-    const onSelectStart = (event) => {
-      const controller = event.target;
-      const intersections = getIntersections(controller);
-      if (intersections.length > 0) {
-        selectedObject = intersections[0].object;
-        controller.attach(selectedObject);
-        controller.userData.selected = selectedObject;
-      }
-    };
-
-    const getIntersections = (controller) => {
-      controller.updateMatrixWorld();
-      const tempMatrix = new THREE.Matrix4();
-      tempMatrix.identity().extractRotation(controller.matrixWorld);
-      const raycaster = new THREE.Raycaster();
-      raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-      raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-      return raycaster.intersectObjects(loadedModelGroup ? [loadedModelGroup] : [], true);
+      console.log('Viewer инициализирован');
     };
 
     const loadModel = (model) => {
-      document.getElementById('current-model').textContent = model.name;
-      document.getElementById('model-desc').textContent = model.desc;
+      console.log(`Загрузка модели: ${model.file}`);
+      
+      elements.currentModel.textContent = model.name;
+      elements.modelDesc.textContent = model.desc;
 
       if (loadedModelGroup) {
         scene.remove(loadedModelGroup);
@@ -288,16 +387,28 @@
       }
 
       const loader = new GLTFLoader();
-      loader.load(model.file, (gltf) => {
-        loadedModelGroup = gltf.scene;
-        loadedModelGroup.scale.set(1, 1, 1);
-        loadedModelGroup.position.set(0, 0, 0);
-        scene.add(loadedModelGroup);
-        resetView();
-      }, undefined, (error) => {
-        console.error('Ошибка загрузки модели:', error);
-        alert('Ошибка загрузки модели');
-      });
+      loader.load(
+        model.file,
+        (gltf) => {
+          console.log('Модель загружена успешно');
+          loadedModelGroup = gltf.scene;
+          loadedModelGroup.scale.set(1, 1, 1);
+          loadedModelGroup.position.set(0, 0, 0);
+          scene.add(loadedModelGroup);
+          
+          resetView();
+          showLoading(false);
+        },
+        (progress) => {
+          console.log('Прогресс загрузки:', progress);
+        },
+        (error) => {
+          console.error('Ошибка загрузки модели:', error);
+          alert(`Ошибка загрузки модели ${model.file}. Проверьте наличие файла.`);
+          showLoading(false);
+          backToSelect();
+        }
+      );
     };
 
     const disposeGroup = (group) => {
@@ -317,88 +428,80 @@
       if (controls) {
         controls.reset();
         camera.position.set(0, 2, 5);
+        controls.update();
       }
     };
 
     const toggleFullscreen = () => {
       if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen();
+        document.documentElement.requestFullscreen().catch(err => console.log('Fullscreen error:', err));
       } else {
         document.exitFullscreen();
       }
     };
 
     const toggleAR = async () => {
+      if (isIOS) {
+        alert('AR недоступно на iOS. Используйте 3D режим.');
+        return;
+      }
+      
       if (isARMode) {
-        isARMode = false;
-        renderer.xr.enabled = false;
-        controls.enabled = true;
-        document.getElementById('ar-instructions').style.display = 'none';
+        toggleWebView();
       } else {
-        if ('xr' in navigator) {
-          const session = await navigator.xr.requestSession('immersive-ar', {
-            requiredFeatures: ['hit-test']
-          });
-          if (session) {
-            isARMode = true;
-            controls.enabled = false;
-            renderer.xr.setSession(session);
-            document.getElementById('ar-instructions').style.display = 'block';
-            onSessionStart();
+        try {
+          if ('xr' in navigator) {
+            const session = await navigator.xr.requestSession('immersive-ar', {
+              requiredFeatures: ['hit-test']
+            });
+            if (session) {
+              isARMode = true;
+              controls.enabled = false;
+              renderer.xr.setSession(session);
+              elements.arInstructions.style.display = 'block';
+              console.log('AR сессия запущена');
+            }
           }
-        } else {
-          alert('AR не поддерживается вашим устройством');
+        } catch (error) {
+          console.error('AR ошибка:', error);
+          alert('AR недоступно на этом устройстве');
         }
       }
     };
 
-    const exitAR = () => {
+    const toggleWebView = () => {
       isARMode = false;
       if (renderer && renderer.xr.getSession()) {
         renderer.xr.getSession().end();
       }
-      document.getElementById('ar-instructions').style.display = 'none';
-      if (controls) controls.enabled = true;
-    };
-
-    const onSessionStart = () => {
-      // Hit-test для AR
-      let hitTestSource = null;
-      const session = renderer.xr.getSession();
-      session.addEventListener('end', () => {
-        hitTestSourceRequested = false;
-        hitTestSource = null;
-      });
-
-      session.requestReferenceSpace('viewer').then(referenceSpace => {
-        session.requestHitTestSource({ space: referenceSpace }).then(source => {
-          hitTestSource = source;
-        });
-      });
+      controls.enabled = true;
+      elements.arInstructions.style.display = 'none';
     };
 
     const onWindowResize = () => {
       if (camera && renderer) {
-        camera.aspect = window.innerWidth / window.innerHeight;
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        
+        camera.aspect = width / height;
         camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        
+        renderer.setSize(width, height);
       }
     };
 
     const animate = () => {
       animationId = requestAnimationFrame(animate);
+      
       if (controls) controls.update();
-      if (renderer) renderer.render(scene, camera);
+      
+      if (renderer) {
+        renderer.render(scene, camera);
+      }
     };
 
-    // Запуск приложения
+    // Запуск
     document.addEventListener('DOMContentLoaded', initApp);
-
-    // Обработчик клика по intro для перехода
-    document.getElementById('intro').addEventListener('click', (e) => {
-      document.getElementById('intro').style.display = 'none';
-      document.getElementById('model-select').style.display = 'block';
-    }, { once: true });
   </script>
 </body>
 </html>
