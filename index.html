@@ -52,16 +52,18 @@
     .btn-secondary { background: rgba(255,255,255,0.2); }
 
     #viewer-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; z-index: 10; }
-    #ui { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 12px; }
+    #ui { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 8px; }
     #ui button { 
-      background: rgba(255,255,255,0.9); border: none; padding: 12px 20px; border-radius: 20px; 
+      background: rgba(255,255,255,0.9); border: none; padding: 10px 16px; border-radius: 20px; 
       cursor: pointer; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      font-size: 13px;
     }
     #ui button.active { background: #4CAF50; color: white; }
 
     #model-info { 
       position: absolute; bottom: 25px; left: 25px; color: white; z-index: 100; 
       background: rgba(0,0,0,0.7); padding: 15px; border-radius: 12px; backdrop-filter: blur(5px);
+      max-width: 260px;
     }
 
     #loading { 
@@ -82,7 +84,12 @@
   </style>
 
   <script type="importmap">
-    { "imports": { "three": "https://unpkg.com/three@0.169.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/" } }
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/"
+      }
+    }
   </script>
 </head>
 <body>
@@ -120,10 +127,13 @@
       <button id="btn-3d" class="active">🖥️ 3D</button>
       <button id="btn-ar">🌐 AR</button>
       <button id="reset-view">🔄 Сброс</button>
+      <button id="scale-plus">➕ Масштаб +</button>
+      <button id="scale-minus">➖ Масштаб −</button>
     </div>
     <div id="model-info">
       <h3 id="current-model"></h3>
       <p id="model-desc"></p>
+      <p id="scale-label" style="font-size:12px;opacity:0.8;margin-top:6px;">Масштаб: 1.0×</p>
     </div>
   </div>
 
@@ -143,6 +153,11 @@
     let currentModelData = null;
     let viewerInitialized = false;
 
+    let modelScale = 1;          // текущий масштаб
+    const MIN_SCALE = 0.2;
+    const MAX_SCALE = 3;
+    const SCALE_STEP = 0.2;
+
     const els = {
       intro: document.getElementById('intro'),
       modelSelect: document.getElementById('model-select'),
@@ -152,13 +167,40 @@
       modelList: document.getElementById('model-list'),
       passwordInput: document.getElementById('password-input'),
       loading: document.getElementById('loading'),
+      loadingText: document.getElementById('loading-text'),
       btnOpen: document.getElementById('btn-open'),
       btnBack: document.getElementById('btn-back'),
       continue3d: document.getElementById('continue-3d'),
       btn3d: document.getElementById('btn-3d'),
       btnAR: document.getElementById('btn-ar'),
-      resetView: document.getElementById('reset-view')
+      resetView: document.getElementById('reset-view'),
+      scalePlus: document.getElementById('scale-plus'),
+      scaleMinus: document.getElementById('scale-minus'),
+      scaleLabel: document.getElementById('scale-label')
     };
+
+    function updateScaleLabel() {
+      if (els.scaleLabel) {
+        els.scaleLabel.textContent = 'Масштаб: ' + modelScale.toFixed(1) + '×';
+      }
+    }
+
+    function applyScaleToModel() {
+      if (loadedModelGroup) {
+        loadedModelGroup.scale.set(modelScale, modelScale, modelScale); // стандартное масштабирование в three.js[web:2][web:3]
+      }
+      updateScaleLabel();
+    }
+
+    function scaleUp() {
+      modelScale = Math.min(MAX_SCALE, modelScale + SCALE_STEP);
+      applyScaleToModel();
+    }
+
+    function scaleDown() {
+      modelScale = Math.max(MIN_SCALE, modelScale - SCALE_STEP);
+      applyScaleToModel();
+    }
 
     // 1. Инициализация списка
     function init() {
@@ -189,13 +231,18 @@
         els.safariWarning.style.display = 'none';
         startViewer();
       };
+
+      // кнопки масштаба
+      els.scalePlus.onclick = scaleUp;
+      els.scaleMinus.onclick = scaleDown;
+      updateScaleLabel();
     }
 
     // 2. Проверка пароля
     function verifyPassword() {
+      if (!currentModelData) return;
       if (els.passwordInput.value === currentModelData.password) {
         els.passwordScreen.style.display = 'none';
-        // Проверка на iOS/Safari для AR
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
         const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         
@@ -211,8 +258,11 @@
 
     // 3. Запуск вьюера
     function startViewer() {
+      if (!currentModelData) return;
       els.viewerContainer.style.display = 'block';
       if (!viewerInitialized) initThree();
+      modelScale = 1;
+      updateScaleLabel();
       loadGLB(currentModelData.file);
       document.getElementById('current-model').textContent = currentModelData.name;
       document.getElementById('model-desc').textContent = currentModelData.desc;
@@ -229,7 +279,7 @@
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(window.devicePixelRatio);
-      renderer.xr.enabled = true; // Важно для AR
+      renderer.xr.enabled = true;
       els.viewerContainer.appendChild(renderer.domElement);
 
       const light = new THREE.AmbientLight(0xffffff, 1);
@@ -241,8 +291,7 @@
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
 
-      // Главный цикл анимации (через setAnimationLoop для поддержки AR)
-      renderer.setAnimationLoop(() => {
+      renderer.setAnimationLoop(() => {          // корректный цикл рендера для 3D/AR[web:7]
         if (controls) controls.update();
         renderer.render(scene, camera);
       });
@@ -250,14 +299,19 @@
       els.btn3d.onclick = () => {
         els.btn3d.classList.add('active');
         els.btnAR.classList.remove('active');
-        // Логика выхода из AR если была активна
+        // здесь может быть логика выхода из AR
       };
 
       els.resetView.onclick = () => {
-        controls.reset();
+        if (controls) controls.reset();
+        camera.position.set(0, 2, 5);
         if (loadedModelGroup) {
           loadedModelGroup.rotation.set(0,0,0);
           loadedModelGroup.position.set(0,0,0);
+          modelScale = 1;
+          applyScaleToModel();
+        } else {
+          updateScaleLabel();
         }
       };
 
@@ -273,29 +327,42 @@
     // 5. Загрузка модели
     function loadGLB(path) {
       els.loading.style.display = 'block';
-      if (loadedModelGroup) scene.remove(loadedModelGroup);
+      els.loadingText.textContent = 'Загрузка...';
+
+      if (loadedModelGroup) {
+        scene.remove(loadedModelGroup);
+        loadedModelGroup = null;
+      }
 
       const loader = new GLTFLoader();
-      loader.load(path, (gltf) => {
-        loadedModelGroup = gltf.scene;
-        
-        // Центрирование модели
-        const box = new THREE.Box3().setFromObject(loadedModelGroup);
-        const center = box.getCenter(new THREE.Vector3());
-        loadedModelGroup.position.sub(center);
-        
-        scene.add(loadedModelGroup);
-        els.loading.style.display = 'none';
-      }, 
-      (xhr) => {
-        const percent = Math.round(xhr.loaded / xhr.total * 100);
-        document.getElementById('loading-text').textContent = `Загрузка: ${percent}%`;
-      },
-      (error) => {
-        console.error(error);
-        alert('Ошибка загрузки модели. Проверьте путь к файлу.');
-        els.loading.style.display = 'none';
-      });
+      loader.load(
+        path,
+        (gltf) => {
+          loadedModelGroup = gltf.scene;
+
+          // Центрирование модели
+          const box = new THREE.Box3().setFromObject(loadedModelGroup);
+          const center = box.getCenter(new THREE.Vector3());
+          loadedModelGroup.position.sub(center);
+
+          // применяем текущий масштаб
+          applyScaleToModel();
+
+          scene.add(loadedModelGroup);
+          els.loading.style.display = 'none';
+        },
+        (xhr) => {
+          if (xhr.total) {
+            const percent = Math.round(xhr.loaded / xhr.total * 100);
+            els.loadingText.textContent = `Загрузка: ${percent}%`;
+          }
+        },
+        (error) => {
+          console.error(error);
+          alert('Ошибка загрузки модели. Проверьте путь к файлу.');
+          els.loading.style.display = 'none';
+        }
+      );
     }
 
     init();
