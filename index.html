@@ -6,35 +6,40 @@
   <title>3D-каталог оборудования | Масштаб</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; overflow: hidden; background: #000; user-select: none; }
+    body { font-family: Arial, sans-serif; overflow: hidden; background: #000; user-select: none; -webkit-user-select: none; }
 
     #intro { 
       position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
       z-index: 1000; display: flex; flex-direction: column; justify-content: center; 
       align-items: center; cursor: pointer; 
+      pointer-events: auto; /* явно разрешаем клики */
     }
     #logo { max-width: 300px; max-height: 150px; filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3)); animation: logoAnim 2s ease-out; }
+    #intro p { color: white; font-size: 1.3em; margin-top: 20px; text-align: center; animation: fadeIn 1s 1s both; }
     @keyframes logoAnim { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
     #model-select { 
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
       background: rgba(0,0,0,0.95); backdrop-filter: blur(20px); 
       padding: 30px; border-radius: 20px; z-index: 999; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.5); 
       display: none; max-width: 90vw; max-height: 80vh; overflow-y: auto;
+      pointer-events: auto;
     }
+    #model-list { list-style: none; margin: 0; padding: 0; }
     #model-list li { 
       background: rgba(255,255,255,0.1); margin: 12px 0; padding: 16px; border-radius: 12px; 
       cursor: pointer; transition: all 0.3s; backdrop-filter: blur(10px); 
-      font-size: 16px; color: white;
+      font-size: 16px; color: white; touch-action: manipulation;
     }
-    #model-list li:hover { background: rgba(255,255,255,0.25); transform: translateX(8px); }
+    #model-list li:hover, #model-list li:active { background: rgba(255,255,255,0.25); transform: translateX(8px); }
 
     #password-screen { 
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
       background: rgba(0,0,0,0.98); padding: 30px; border-radius: 20px; z-index: 1001; 
       text-align: center; display: none; backdrop-filter: blur(20px); 
-      max-width: 90vw;
+      max-width: 90vw; pointer-events: auto;
     }
     #password-input { 
       padding: 14px 20px; font-size: 18px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.3); 
@@ -44,9 +49,11 @@
     .btn { 
       background: linear-gradient(45deg, #667eea, #764ba2); color: white; border: none; 
       padding: 14px 30px; border-radius: 25px; cursor: pointer; font-size: 15px; margin: 8px; 
-      font-weight: 500; min-width: 140px; transition: 0.2s;
+      font-weight: 500; min-width: 140px; transition: 0.2s; touch-action: manipulation;
     }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
     .btn-secondary { background: rgba(255,255,255,0.2); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     #viewer-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; z-index: 10; }
     #ui { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 8px; }
@@ -55,13 +62,13 @@
       cursor: pointer; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
       font-size: 13px; touch-action: manipulation;
     }
+    #ui button:hover:not(:disabled) { background: white; transform: translateY(-1px); }
     #ui button.active { background: #4CAF50; color: white; }
-    #ui button:disabled { opacity: 0.5; cursor: not-allowed; }
 
     #model-info { 
-      position: absolute; bottom: 25px; left: 25px; color: white; z-index: 100; 
+      position: absolute; bottom: 25px; left: 25px; color: white; z-index: 50; /* снижено */
       background: rgba(0,0,0,0.75); padding: 16px; border-radius: 12px; backdrop-filter: blur(10px);
-      max-width: 260px;
+      max-width: 260px; pointer-events: none; /* не мешает кликам */
     }
     #scale-label { font-size: 12px; opacity: 0.9; margin-top: 6px; font-weight: bold; }
 
@@ -89,7 +96,7 @@
 
   <div id="intro">
     <img src="logo.png" alt="Logo" id="logo">
-    <p>3D-каталог оборудования<br><small>Нажмите для входа</small></p>
+    <p>3D-каталог оборудования<br><small>👆 Нажмите экран для входа</small></p>
   </div>
 
   <div id="model-select">
@@ -99,8 +106,8 @@
 
   <div id="password-screen">
     <h3 id="model-title"></h3>
-    <input type="password" id="password-input" placeholder="Пароль">
-    <button class="btn" id="btn-open">Открыть</button>
+    <input type="password" id="password-input" placeholder="Введите пароль">
+    <button class="btn" id="btn-open">Открыть модель</button>
     <button class="btn btn-secondary" id="btn-back">Назад</button>
   </div>
 
@@ -196,7 +203,6 @@
     }
 
     function handleTouchStart(e) {
-      clearTimeout(touchTimer);
       const now = Date.now();
       if (now - lastTapTime < 300) { // двойной тап
         e.preventDefault();
@@ -206,36 +212,171 @@
       lastTapTime = now;
     }
 
-    function handleTouchEnd(e) {
-      touchTimer = setTimeout(() => {
-        // долгое нажатие - показать подсказку
-        console.log('Долгое нажатие: двойной тап для сброса масштаба');
-      }, 500);
-    }
-
-    // Инициализация
+    // Инициализация приложения
     function init() {
+      // Интро - клик по всему экрану
+      els.intro.addEventListener('click', (e) => {
+        e.preventDefault();
+        els.intro.style.display = 'none';
+        els.modelSelect.style.display = 'block';
+      });
+      els.intro.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        els.intro.style.display = 'none';
+        els.modelSelect.style.display = 'block';
+      });
+
+      // Список моделей
       MODELS.forEach(m => {
         const li = document.createElement('li');
         li.textContent = m.name;
-        li.onclick = () => selectModel(m);
+        li.addEventListener('click', () => selectModel(m));
         els.modelList.appendChild(li);
       });
 
-      els.intro.onclick = () => {
-        els.intro.style.display = 'none';
-        els.modelSelect.style.display = 'block';
-      };
-
-      els.btnOpen.onclick = verifyPassword;
-      els.btnBack.onclick = () => {
+      // Пароль
+      els.btnOpen.addEventListener('click', verifyPassword);
+      els.btnBack.addEventListener('click', () => {
         els.passwordScreen.style.display = 'none';
         els.modelSelect.style.display = 'block';
-      };
+      });
+      els.passwordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') verifyPassword();
+      });
 
-      els.scalePlus.onclick = scaleUp;
-      els.scaleMinus.onclick = scaleDown;
-      els.resetView.onclick = () => {
+      // Кнопки UI
+      els.scalePlus.addEventListener('click', scaleUp);
+      els.scaleMinus.addEventListener('click', scaleDown);
+      els.resetView.addEventListener('click', () => {
         if (controls) controls.reset();
         camera.position.set(0, 2, 5);
-        resetModelScale(
+        resetModelScale();
+        if (loadedModelGroup) {
+          loadedModelGroup.rotation.set(0,0,0);
+          loadedModelGroup.position.set(0,0,0);
+        }
+      });
+
+      els.btn3d.addEventListener('click', () => {
+        els.btn3d.classList.add('active');
+        els.btnAR.classList.remove('active');
+      });
+
+      updateScaleLabel();
+    }
+
+    function selectModel(model) {
+      currentModelData = model;
+      document.getElementById('model-title').textContent = model.name;
+      els.modelSelect.style.display = 'none';
+      els.passwordScreen.style.display = 'block';
+      els.passwordInput.value = '';
+      els.passwordInput.focus();
+    }
+
+    function verifyPassword() {
+      if (els.passwordInput.value === currentModelData.password) {
+        els.passwordScreen.style.display = 'none';
+        startViewer();
+      } else {
+        alert('Неверный пароль');
+        els.passwordInput.value = '';
+        els.passwordInput.focus();
+      }
+    }
+
+    function startViewer() {
+      els.viewerContainer.style.display = 'block';
+      if (!viewerInitialized) initThree();
+      modelScale = 1;
+      resetModelScale();
+      loadGLB(currentModelData.file);
+      els.currentModel.textContent = currentModelData.name;
+      els.modelDesc.textContent = currentModelData.desc;
+    }
+
+    function initThree() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x222222);
+
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 2, 5);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.xr.enabled = true;
+      els.viewerContainer.appendChild(renderer.domElement);
+
+      // Освещение
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+      dirLight.position.set(5, 5, 5);
+      scene.add(dirLight);
+
+      // OrbitControls с мобильными жестами
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.enableZoom = true;  // pinch-to-zoom
+      controls.zoomSpeed = 0.8;
+      controls.maxDistance = 20;
+      controls.minDistance = 1;
+
+      // Мобильные жесты
+      renderer.domElement.addEventListener('touchstart', handleTouchStart, { passive: false });
+
+      // Цикл рендера
+      renderer.setAnimationLoop(() => {
+        if (controls) controls.update();
+        renderer.render(scene, camera);
+      });
+
+      // Resize
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      viewerInitialized = true;
+    }
+
+    function loadGLB(path) {
+      els.loading.style.display = 'block';
+      els.loadingText.textContent = 'Загрузка...';
+
+      if (loadedModelGroup) {
+        scene.remove(loadedModelGroup);
+        loadedModelGroup = null;
+      }
+
+      const loader = new GLTFLoader();
+      loader.load(path, (gltf) => {
+        loadedModelGroup = gltf.scene;
+        
+        // Центрирование
+        const box = new THREE.Box3().setFromObject(loadedModelGroup);
+        const center = box.getCenter(new THREE.Vector3());
+        loadedModelGroup.position.sub(center);
+        
+        applyScaleToModel();
+        scene.add(loadedModelGroup);
+        els.loading.style.display = 'none';
+      }, (xhr) => {
+        if (xhr.total) {
+          const percent = Math.round(xhr.loaded / xhr.total * 100);
+          els.loadingText.textContent = `Загрузка: ${percent}%`;
+        }
+      }, (error) => {
+        console.error(error);
+        alert('Ошибка загрузки: ' + path);
+        els.loading.style.display = 'none';
+      });
+    }
+
+    // Запуск
+    init();
+  </script>
+</body>
+</html>
